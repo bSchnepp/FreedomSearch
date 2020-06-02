@@ -23,15 +23,28 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
 IN THE SOFTWARE.
  */
+ 
+#include <string> 
 
-#include <cstdint>
-#include <iostream>
-
-#include <FreedomHTTP/Server.hpp>
-
-int main(int argc, char **argv)
+#ifndef _FREEDOMHTTP_HTTP_METHOD_HPP_
+#define _FREEDOMHTTP_HTTP_METHOD_HPP_
+namespace FreedomHTTP
 {
-	FreedomHTTP::Server Server(80);
-	Server.Run();
-	return 0;
+
+typedef enum HTTPMethod
+{
+	HTTP_METHOD_GET = 0x00,
+	HTTP_METHOD_HEAD,
+	HTTP_METHOD_POST,
+	HTTP_METHOD_PUT,
+	HTTP_METHOD_DELETE,
+	HTTP_METHOD_TRACE,
+	HTTP_METHOD_CONNECT,
+	
+	HTTP_METHOD_INVALID = 0xFF,
+}HTTPMethod;
+
+HTTPMethod ParseStringToMethod(std::string String);
+
 }
+#endif

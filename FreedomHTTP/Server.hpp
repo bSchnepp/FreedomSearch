@@ -24,14 +24,35 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
  */
 
-#include <cstdint>
-#include <iostream>
+#include "HTTPMethod.hpp" 
 
-#include <FreedomHTTP/Server.hpp>
+#include <unordered_map>
+ 
+#ifndef _FREEDOMHTTP_SERVER_HPP_
+#define _FREEDOMHTTP_SERVER_HPP_
 
-int main(int argc, char **argv)
+namespace FreedomHTTP
 {
-	FreedomHTTP::Server Server(80);
-	Server.Run();
-	return 0;
+
+typedef std::string (*EndpointHandler)(void *Data, std::string Input);
+
+class Server
+{
+public:
+	Server();
+	Server(uint16_t Port);
+	virtual ~Server(){};
+	
+	void Run();
+	bool Mount(std::string Location, EndpointHandler Handler);
+	bool Umount(std::string Location);
+	
+protected:
+	std::unordered_map<std::string, EndpointHandler> Mounts;
+	uint16_t Port;
+};
+
 }
+
+
+#endif

@@ -23,15 +23,13 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
 IN THE SOFTWARE.
  */
+ 
+#include <string>
 
-#include <cstdint>
-#include <iostream>
+#include "HTTPMethod.hpp"
 
-#include <FreedomHTTP/Server.hpp>
-
-int main(int argc, char **argv)
+FreedomHTTP::HTTPMethod FreedomHTTP::ParseStringToMethod(std::string String)
 {
-	FreedomHTTP::Server Server(80);
-	Server.Run();
-	return 0;
+	/* nyi */
+	return HTTP_METHOD_INVALID;
 }

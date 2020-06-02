@@ -23,15 +23,60 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
 IN THE SOFTWARE.
  */
-
-#include <cstdint>
+ 
 #include <iostream>
+#include <string>
 
-#include <FreedomHTTP/Server.hpp>
+#include <boost/asio.hpp>
+#include <unordered_map>
 
-int main(int argc, char **argv)
+#include "HTTPMethod.hpp"
+#include "Server.hpp"
+
+using tcp = boost::asio::ip::tcp;
+
+FreedomHTTP::Server::Server() 
+	: FreedomHTTP::Server::Server(8080)
 {
-	FreedomHTTP::Server Server(80);
-	Server.Run();
-	return 0;
+
+}
+
+FreedomHTTP::Server::Server(uint16_t Port)
+{
+	this->Port = Port;
+}
+	
+void FreedomHTTP::Server::Run()
+{
+	boost::asio::io_context IOContext;
+	tcp::acceptor Acceptor(IOContext,
+		tcp::endpoint(tcp::v4(), this->Port));
+			
+	for (;;)
+	{
+		try
+		{
+			tcp::socket Socket(IOContext);
+			Acceptor.accept(Socket);
+			boost::system::error_code IgnoredError;
+			
+			std::string Message = "Hello, world!\n";
+			
+			boost::asio::write(
+				Socket, boost::asio::buffer(Message), 
+				IgnoredError);
+		} catch (std::exception &Exception) {
+			std::cerr << Exception.what() << std::endl;
+		}
+	}
+}
+
+bool FreedomHTTP::Server::Mount(std::string Location, EndpointHandler Handler)
+{
+	return false;
+}
+
+bool FreedomHTTP::Server::Umount(std::string Location)
+{
+	return false;
 }
