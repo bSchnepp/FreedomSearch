@@ -58,9 +58,25 @@ void FreedomHTTP::Server::Run()
 		{
 			tcp::socket Socket(IOContext);
 			Acceptor.accept(Socket);
-			boost::system::error_code IgnoredError;
+			boost::system::error_code Error;
 			
-			std::string Reply = "Hello, world!";
+			boost::asio::streambuf RecieveBuffer;
+			boost::asio::read(Socket, RecieveBuffer, 
+				boost::asio::transfer_at_least(1), Error);
+			
+			if (Error && Error != boost::asio::error::eof)
+			{
+				/* Uh oh... */
+			}
+			
+			boost::asio::streambuf::const_buffers_type Bufs 
+				= RecieveBuffer.data();
+			std::string Convert(
+				boost::asio::buffers_begin(Bufs),
+				boost::asio::buffers_begin(Bufs) + Bufs.size());
+			
+			std::string Reply = "Hello, world: " 
+				+ Convert;
 			
 			std::string Message 
 				= FreedomHTTP::ParseResponseToString(
@@ -69,11 +85,12 @@ void FreedomHTTP::Server::Run()
 			Message += "Content-Length: " 
 				+ std::to_string(Reply.length()) + "\r\n";
 			Message += "\r\n";
-			Message += "Hello, world!\n";
+			Message += Reply;
 			
+				
 			boost::asio::write(
 				Socket, boost::asio::buffer(Message), 
-				IgnoredError);
+				Error);
 		} catch (std::exception &Exception) {
 			std::cerr << Exception.what() << std::endl;
 		}
