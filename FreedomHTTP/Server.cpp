@@ -30,7 +30,7 @@ IN THE SOFTWARE.
 #include <boost/asio.hpp>
 #include <unordered_map>
 
-#include "HTTPMethod.hpp"
+#include "HTTPCodes.hpp"
 #include "Server.hpp"
 
 using tcp = boost::asio::ip::tcp;
@@ -51,7 +51,7 @@ void FreedomHTTP::Server::Run()
 	boost::asio::io_context IOContext;
 	tcp::acceptor Acceptor(IOContext,
 		tcp::endpoint(tcp::v4(), this->Port));
-			
+		
 	for (;;)
 	{
 		try
@@ -60,7 +60,16 @@ void FreedomHTTP::Server::Run()
 			Acceptor.accept(Socket);
 			boost::system::error_code IgnoredError;
 			
-			std::string Message = "Hello, world!\n";
+			std::string Reply = "Hello, world!";
+			
+			std::string Message 
+				= FreedomHTTP::ParseResponseToString(
+					FreedomHTTP::HTTP_RESPONSE_200_OK);
+			Message += "Connection: Closed\r\n";
+			Message += "Content-Length: " 
+				+ std::to_string(Reply.length()) + "\r\n";
+			Message += "\r\n";
+			Message += "Hello, world!\n";
 			
 			boost::asio::write(
 				Socket, boost::asio::buffer(Message), 
