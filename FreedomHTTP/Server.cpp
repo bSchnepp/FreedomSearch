@@ -26,15 +26,116 @@ IN THE SOFTWARE.
  
 #include <iostream>
 #include <string>
+#include <sstream>
 
 #include <boost/asio.hpp>
+#include <boost/algorithm/string.hpp>
+
+
 #include <unordered_map>
+
+#include "urilite.h"
 
 #include "HTTPCodes.hpp"
 #include "Server.hpp"
 
 using tcp = boost::asio::ip::tcp;
 
+FreedomHTTP::HTTPRequest FreedomHTTP::ParseRequest(std::string Content)
+{
+	/* nyi */
+	std::istringstream CStream(Content);
+	FreedomHTTP::HTTPRequest RetVal;
+	
+	std::string Line;
+	while (std::getline(CStream, Line))
+	{
+		if (Line.compare("\r") == 0)
+		{
+			break;
+		}
+		
+		std::string::size_type Index = Line.find(':',  0);
+		if (Index != std::string::npos)
+		{
+			std::string Key 
+				= boost::algorithm::trim_copy(Line.substr(
+					0, Index));
+					
+			std::string Value
+				= boost::algorithm::trim_copy(Line.substr(
+					Index+1));
+			RetVal.Headers[Key] = Value;
+		} else if (Line.find("HTTP/") != std::string::npos) {
+			std::vector<std::string> Parts;
+			boost::split(Parts, Line, boost::is_any_of(" "));
+			if (Parts.size() != 3)
+			{
+				RetVal.HTTPVersion = 1.1f;
+				RetVal.Method = HTTP_METHOD_GET;
+				RetVal.Location = "invalid";
+				return RetVal;
+			}
+			
+			RetVal.Method = ParseStringToMethod(Parts[0]);
+			RetVal.Location = Parts[1];
+			
+			std::vector<std::string> HTTPSplit;
+			boost::split(HTTPSplit, Parts[2], 
+				boost::is_any_of("/"));
+			if (HTTPSplit[0].compare("HTTP") == 0)
+			{
+				RetVal.HTTPVersion = atof(HTTPSplit[1].c_str());
+			} else {
+				RetVal.HTTPVersion = 1.1f;
+				RetVal.Method = HTTP_METHOD_GET;
+				RetVal.Location = "invalid";
+				return RetVal;
+			}
+		}
+	}
+	if (Content.find("\r\n\r\n") != std::string::npos)
+	{
+		if (RetVal.Headers.find("Content-Length") 
+			!= RetVal.Headers.end())
+		{
+			std::string Rest 
+				= Content.substr(Content.find("\r\n\r\n"));
+			RetVal.ContentLength = Rest.length();
+			if (std::stoull(
+				RetVal.Headers["Content-Length"], NULL, 10) 
+					!= RetVal.ContentLength)
+			{
+				std::cerr 
+					<< "Inconsistent content length. " 
+					<< std::endl;
+			}
+
+			/* HACK. Make sure this works. */
+			RetVal.Content 
+				= reinterpret_cast<uint8_t*>(Rest.data());
+		} else {
+			RetVal.ContentLength = 0;
+			/* NYI: Chunked content (ie, streaming) */
+		}
+	}
+	/* Use urilite to handle %20 and + and whatnot.
+	 * TODO: Make sure that HTTP spec is happy with this
+	 * behavior!
+	 */
+	RetVal.Location = urilite::uri::decode(RetVal.Location);
+	RetVal.Location = urilite::uri::decode2(RetVal.Location);
+	return RetVal;
+}
+
+
+/**
+ * Sets up the integrated web server
+ * to begin listening in port 8080.
+ *
+ * @see FreedomHTTP::Server::Server(uint16_t Port)
+ * @author Brian Schnepp
+ */
 FreedomHTTP::Server::Server() 
 	: FreedomHTTP::Server::Server(8080)
 {
@@ -54,6 +155,10 @@ void FreedomHTTP::Server::Run()
 		
 	for (;;)
 	{
+		/*
+		 * TODO: Make async, add in watchdog timer,
+		 * and keep connections open until watchdog expires 
+		 */
 		try
 		{
 			tcp::socket Socket(IOContext);
@@ -67,6 +172,8 @@ void FreedomHTTP::Server::Run()
 			if (Error && Error != boost::asio::error::eof)
 			{
 				/* Uh oh... */
+				Socket.close();
+				continue;
 			}
 			
 			boost::asio::streambuf::const_buffers_type Bufs 
@@ -75,8 +182,10 @@ void FreedomHTTP::Server::Run()
 				boost::asio::buffers_begin(Bufs),
 				boost::asio::buffers_begin(Bufs) + Bufs.size());
 			
-			std::string Reply = "Hello, world: " 
-				+ Convert;
+			FreedomHTTP::HTTPRequest Interped 
+				= FreedomHTTP::ParseRequest(Convert);
+
+			std::string Reply = "Hello, world: " + std::to_string(Interped.ContentLength) + " " + Interped.Location;
 			
 			std::string Message 
 				= FreedomHTTP::ParseResponseToString(
@@ -99,10 +208,29 @@ void FreedomHTTP::Server::Run()
 
 bool FreedomHTTP::Server::Mount(std::string Location, EndpointHandler Handler)
 {
-	return false;
+	if (this->Mounts.count(Location))
+	{
+		return false;
+	}
+	this->Mounts[Location] = Handler;
+	return true;
 }
 
+/**
+ * Removes a mounted endpoint from the virtual filesystem
+ * for the web server. This causes any subsequent requests to
+ * the location to be supplied with the default 404 Not Found page.
+ *
+ * @author Brian Schnepp
+ * @param Location The location in the VFS to remove
+ * @return True on success, false otherwise
+ */
 bool FreedomHTTP::Server::Umount(std::string Location)
 {
+	if (this->Mounts.count(Location))
+	{
+		this->Mounts.erase(Location);
+		return true;
+	}
 	return false;
 }

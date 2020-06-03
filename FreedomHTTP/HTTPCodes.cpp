@@ -40,7 +40,6 @@ IN THE SOFTWARE.
  */
 FreedomHTTP::HTTPMethod FreedomHTTP::ParseStringToMethod(std::string String)
 {
-	/* Probably missing a few... */
 	if (String.compare("GET") == 0)
 	{
 		return HTTP_METHOD_GET;
@@ -56,6 +55,8 @@ FreedomHTTP::HTTPMethod FreedomHTTP::ParseStringToMethod(std::string String)
 		return HTTP_METHOD_TRACE;
 	} else if (String.compare("CONNECT") == 0) {
 		return HTTP_METHOD_CONNECT;
+	} else if (String.compare("OPTIONS") == 0) {
+		return HTTP_METHOD_OPTIONS;
 	}
 	
 	return HTTP_METHOD_INVALID;

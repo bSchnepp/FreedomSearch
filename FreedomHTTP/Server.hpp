@@ -26,6 +26,8 @@ IN THE SOFTWARE.
 
 #include "HTTPCodes.hpp" 
 
+#include <list>
+#include <cstdint>
 #include <unordered_map>
  
 #ifndef _FREEDOMHTTP_SERVER_HPP_
@@ -34,7 +36,29 @@ IN THE SOFTWARE.
 namespace FreedomHTTP
 {
 
-typedef std::string (*EndpointHandler)(void *Data, std::string Input);
+typedef struct HTTPRequest
+{
+	float HTTPVersion;
+	HTTPMethod Method;
+	std::string Location;
+	std::unordered_map<std::string, std::string> Headers;
+
+	uint64_t ContentLength;
+	uint8_t *Content;
+}HTTPRequest;
+
+HTTPRequest ParseRequest(std::string Content);
+
+typedef struct HTTPResponse
+{
+	HTTPResponseCode ResponseCode;
+	std::unordered_map<std::string, std::string> Headers;
+	/* Do it like this to support things that aren't strings */
+	uint64_t ContentLength;
+	uint8_t *Content;
+}HTTPResponse;
+
+typedef HTTPResponse (*EndpointHandler)(void *Data, HTTPRequest Request);
 
 class Server
 {
